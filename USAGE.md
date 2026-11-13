@@ -38,6 +38,10 @@
     -   [Parameters][34]
 -   [setFilters][35]
     -   [Parameters][36]
+-   [setGraphFilter][37]
+    -   [Parameters][38]
+-   [clearGraphFilter][39]
+-   [getGraphFilterStatus][40]
 
 ## Copyright_Notice
 
@@ -63,7 +67,7 @@ The `objectHovered` event is fired whenever on mouseover on a 'node' or 'connect
 
 ### Properties
 
--   `object` **[object][37]** The object that has been hovered,
+-   `object` **[object][41]** The object that has been hovered,
 
 ## objectHighlighted
 
@@ -72,7 +76,7 @@ The `objectHighlighted` event is fired whenever an object is highlighted.
 
 ### Properties
 
--   `object` **[object][37]** The object that has been highlighted, or the highlighted object that has been updated.
+-   `object` **[object][41]** The object that has been highlighted, or the highlighted object that has been updated.
 
 ## viewChanged
 
@@ -80,7 +84,7 @@ The `viewChanged` event is fired whenever the view changes
 
 ### Properties
 
--   `view` **[array][38]** The currently selected view (e.g. \[] for global, ['us-east-1'] for one node deep, ['us-east-1', 'api'] for two nodes deep)
+-   `view` **[array][42]** The currently selected view (e.g. \[] for global, ['us-east-1'] for one node deep, ['us-east-1', 'api'] for two nodes deep)
 
 ## nodeContextSizeChanged
 
@@ -88,7 +92,7 @@ The `nodeContextSizeChanged` event is fired whenever the context panel size for 
 
 ### Properties
 
--   `dimensions` **[object][37]** The dimensions of the node context panels
+-   `dimensions` **[object][41]** The dimensions of the node context panels
 
 ## matchesFound
 
@@ -96,7 +100,7 @@ The `matchesFound` event is fired whenever nodes are found via findNodes().
 
 ### Properties
 
--   `matches` **[object][37]** The matches object { total, visible }
+-   `matches` **[object][41]** The matches object { total, visible }
 
 ## viewUpdated
 
@@ -108,14 +112,14 @@ Represents a Vizceral component.
 
 ### Parameters
 
--   `canvas` **[object][37]?** The canvas to render the graph onto; if not provided, will create a canvas accessible by this.renderer.domElement
--   `targetFramerate` **[Number][39]?** Target frame rate to render at. Will not limit FPS if not provided or set to 0.
+-   `canvas` **[object][41]?** The canvas to render the graph onto; if not provided, will create a canvas accessible by this.renderer.domElement
+-   `targetFramerate` **[Number][43]?** Target frame rate to render at. Will not limit FPS if not provided or set to 0.
 
 ## getStyles
 
 Get an array of all possible defined styles
 
-Returns **[array][38]** Array of all possible styles
+Returns **[array][42]** Array of all possible styles
 
 ## updateStyles
 
@@ -124,7 +128,7 @@ Update the global styles
 ### Parameters
 
 -   `styles`  
--   `An` **[Object][37]** object map of style names to values
+-   `An` **[Object][41]** object map of style names to values
 
 ## updateDefinitions
 
@@ -133,7 +137,7 @@ Update the global definitions
 ### Parameters
 
 -   `definitions`  
--   `An` **[Object][37]** object map of definitions. See the format and defaults in ([https://github.com/Netflix/Vizceral/wiki/Configuration#definitions-for-data-to-display][40])
+-   `An` **[Object][41]** object map of definitions. See the format and defaults in ([https://github.com/Netflix/Vizceral/wiki/Configuration#definitions-for-data-to-display][44])
 
 ## updateData
 
@@ -143,7 +147,7 @@ with the complete set of traffic data anytime there is an update.
 ### Parameters
 
 -   `trafficData`  
--   `data` **[object][37]** The traffic data that matches the format in ([https://github.com/Netflix/Vizceral/wiki/How-to-Use#graph-data-format][41])
+-   `data` **[object][41]** The traffic data that matches the format in ([https://github.com/Netflix/Vizceral/wiki/How-to-Use#graph-data-format][45])
 
 ## setHighlightedNode
 
@@ -151,7 +155,7 @@ Sets the highlighted node.  If the node is undefined, clears any highlighting.
 
 ### Parameters
 
--   `node` **[object][37]** The node to highlight
+-   `node` **[object][41]** The node to highlight
 
 ## setHighlightedConnection
 
@@ -159,7 +163,7 @@ Sets the highlighted connection.  If the connection is undefined, clears any hig
 
 ### Parameters
 
--   `connection` **[object][37]** The connection to highlight
+-   `connection` **[object][41]** The connection to highlight
 
 ## findNodes
 
@@ -168,9 +172,9 @@ of sub nodes, if nodes have one.
 
 ### Parameters
 
--   `searchString` **[string][42]** The string to match against the nodes.
+-   `searchString` **[string][46]** The string to match against the nodes.
 
-Returns **[object][37]** { total, totalMatches, visible, visibleMatches }
+Returns **[object][41]** { total, totalMatches, visible, visibleMatches }
 
 ## setView
 
@@ -186,8 +190,8 @@ Ex:
 
 ### Parameters
 
--   `viewArray` **[array][38]** the array containing the view to set. (optional, default `[]`)
--   `objectNameToHighlight` **[string][42]** a node or connection to set as highlighted in the current viewArray
+-   `viewArray` **[array][42]** the array containing the view to set. (optional, default `[]`)
+-   `objectNameToHighlight` **[string][46]** a node or connection to set as highlighted in the current viewArray
 
 ## setModes
 
@@ -208,7 +212,7 @@ Get a specific node object
 
 ### Parameters
 
--   `viewArray` **[array][38]** e.g. [ node1, node2 ]
+-   `viewArray` **[array][42]** e.g. [ node1, node2 ]
 
 ## setFilters
 
@@ -216,7 +220,39 @@ Set the set of filters to apply along with their current values.
 
 ### Parameters
 
--   `filters` **[object][37]** The filters that match the format in ([https://github.com/Netflix/Vizceral/wiki/Configuration#filters][43])
+-   `filters` **[object][41]** The filters that match the format in ([https://github.com/Netflix/Vizceral/wiki/Configuration#filters][47])
+
+## setGraphFilter
+
+Set a graph filter on the current graph: fuzzy name search and/or a
+numeric metric range. Matched nodes are highlighted; non-matched nodes
+are hidden (edgePolicy 'hide', default; their connections are
+disconnected) or greyed out in place (edgePolicy 'dim'). Layout and
+node positions are never changed by filtering. Listen for the
+'graphFilterStatus' event to react to the result, including the
+zero-match (empty) state.
+
+### Parameters
+
+-   `criteria` **[object][41]** { nameQuery?, metricKey?, min?, max?, edgePolicy? }
+
+
+-   Throws **[TypeError][48]** When the criteria is invalid
+
+Returns **[object][41]** The filter status, or undefined if there is no current graph
+
+## clearGraphFilter
+
+Clear any active graph filter on the current graph.
+
+Returns **[object][41]** The filter status, or undefined if there is no current graph
+
+## getGraphFilterStatus
+
+Get the graph filter status of the current graph. When `empty` is true
+the filter matched zero nodes and UI should show a "no matches" state.
+
+Returns **[object][41]** The filter status, or undefined if there is no current graph
 
 [1]: #copyright_notice
 
@@ -290,16 +326,26 @@ Set the set of filters to apply along with their current values.
 
 [36]: #parameters-10
 
-[37]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
+[37]: #setgraphfilter
 
-[38]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array
+[38]: #parameters-11
 
-[39]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number
+[39]: #cleargraphfilter
 
-[40]: https://github.com/Netflix/Vizceral/wiki/Configuration#definitions-for-data-to-display
+[40]: #getgraphfilterstatus
 
-[41]: https://github.com/Netflix/Vizceral/wiki/How-to-Use#graph-data-format
+[41]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
 
-[42]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String
+[42]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array
 
-[43]: https://github.com/Netflix/Vizceral/wiki/Configuration#filters
+[43]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number
+
+[44]: https://github.com/Netflix/Vizceral/wiki/Configuration#definitions-for-data-to-display
+
+[45]: https://github.com/Netflix/Vizceral/wiki/How-to-Use#graph-data-format
+
+[46]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String
+
+[47]: https://github.com/Netflix/Vizceral/wiki/Configuration#filters
+
+[48]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/TypeError

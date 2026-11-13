@@ -1,0 +1,13 @@
+{
+  "env": { "node": true },
+  "rules": {
+    "no-console": "off",
+    "import/no-dynamic-require": "off",
+    "no-restricted-syntax": "off",
+    "object-curly-newline": "off",
+    "global-require": "off",
+    "no-continue": "off",
+    "no-new-func": "off",
+    "no-underscore-dangle": "off"
+  }
+}

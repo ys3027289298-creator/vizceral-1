@@ -181,6 +181,11 @@ class Node extends GraphObject {
       && every(this.outgoingConnections, connection => !connection.isVisible()));
   }
 
+  hasLayoutVisibleConnections () {
+    return !(every(this.incomingConnections, connection => !connection.isLayoutVisible())
+      && every(this.outgoingConnections, connection => !connection.isLayoutVisible()));
+  }
+
   hasDefaultVisibleConnections () {
     return !(every(this.incomingConnections, connection => connection.defaultFiltered)
       && every(this.outgoingConnections, connection => connection.defaultFiltered));

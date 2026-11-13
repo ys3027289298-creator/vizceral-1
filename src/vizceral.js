@@ -207,6 +207,7 @@ class Vizceral extends EventEmitter {
     graph.on('objectHovered', hoveredObject => this.emit('objectHovered', hoveredObject));
     graph.on('setView', view => this.setView(view));
     graph.on('viewUpdated', () => this.emit('viewUpdated'));
+    graph.on('graphFilterStatus', status => this.emit('graphFilterStatus', status));
   }
 
   createGraph (graphData, mainView, parentGraph, width, height) {
@@ -557,6 +558,51 @@ class Vizceral extends EventEmitter {
     if (this.currentGraph) {
       this.currentGraph.setFilters(filters);
     }
+  }
+
+  /**
+   * Set a graph filter on the current graph: fuzzy name search and/or a
+   * numeric metric range. Matched nodes are highlighted; non-matched nodes
+   * are hidden (edgePolicy 'hide', default; their connections are
+   * disconnected) or greyed out in place (edgePolicy 'dim'). Layout and
+   * node positions are never changed by filtering. Listen for the
+   * 'graphFilterStatus' event to react to the result, including the
+   * zero-match (empty) state.
+   *
+   * @param {object} criteria { nameQuery?, metricKey?, min?, max?, edgePolicy? }
+   * @returns {object} The filter status, or undefined if there is no current graph
+   * @throws {TypeError} When the criteria is invalid
+   */
+  setGraphFilter (criteria) {
+    if (this.currentGraph) {
+      return this.currentGraph.setGraphFilter(criteria);
+    }
+    return undefined;
+  }
+
+  /**
+   * Clear any active graph filter on the current graph.
+   *
+   * @returns {object} The filter status, or undefined if there is no current graph
+   */
+  clearGraphFilter () {
+    if (this.currentGraph) {
+      return this.currentGraph.clearGraphFilter();
+    }
+    return undefined;
+  }
+
+  /**
+   * Get the graph filter status of the current graph. When `empty` is true
+   * the filter matched zero nodes and UI should show a "no matches" state.
+   *
+   * @returns {object} The filter status, or undefined if there is no current graph
+   */
+  getGraphFilterStatus () {
+    if (this.currentGraph) {
+      return this.currentGraph.getGraphFilterStatus();
+    }
+    return undefined;
   }
 
   setRenderers (renderers) {

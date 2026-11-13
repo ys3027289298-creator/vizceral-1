@@ -16,13 +16,16 @@
  *
  */
 import {
-  clone, each, every, filter, includes, reduce, sumBy, transform
+  clone, each, every, filter, includes, map, reduce, sumBy, transform
 } from 'lodash';
 import EventEmitter from 'events';
 import TWEEN from '@tweenjs/tween.js';
 import ParticleSystem from '../physics/particleSystem';
 import Notices from '../notices';
 import TrafficGraphView from './trafficGraphView';
+import {
+  applyGraphFilter, validateCriteria, EDGE_POLICIES, DEFAULT_EDGE_POLICY
+} from './graphFilter';
 
 const Console = console; // Eliminate eslint warnings for non-debug console messages
 
@@ -90,6 +93,11 @@ class TrafficGraph extends EventEmitter {
 
     this.hasPositionData = false;
     this.loadedOnce = false;
+
+    // Graph filter (name search + numeric range) state. null means inactive,
+    // in which case rendering and layout are exactly the historical behavior.
+    this.graphFilter = null;
+    this.graphFilterResult = null;
   }
 
   onAsyncLayoutBegin () {
@@ -105,10 +113,15 @@ class TrafficGraph extends EventEmitter {
    */
   updateView () {
     if (this.current && this.hasPositionData) {
+      // Apply graph filter visibility flags first so that filtered-out
+      // objects are added/removed from the scene in the same pass.
+      if (this.graphFilter) { this._applyGraphFilterVisibility(); }
       // First, update the state of the view, hiding and showing any necessary nodes or connections
       this.view.updateState();
       // Re-apply highlighting to the graph in case there are new nodes or connections
       if (this.searchString) { this.highlightMatchedNodes(this.searchString); }
+      // Re-apply graph filter dimming so it wins over search dimming
+      if (this.graphFilter) { this._applyGraphFilterDimming(); }
       if (this.highlightedObject) { this.highlightObject(this.highlightedObject, true); }
       // Emit a viewUpdated event so any coordinating UI can update accordingly
       this.emit('viewUpdated');
@@ -254,6 +267,147 @@ class TrafficGraph extends EventEmitter {
     this._applyDimming(dimNodes, dimConnections, dimDefault);
 
     return matches;
+  }
+
+  /**
+   * Set a graph filter to search and filter nodes by name (fuzzy substring
+   * match) and/or by a numeric metric range. Matched nodes are highlighted;
+   * non-matched nodes are either hidden (edgePolicy 'hide', the default,
+   * which also disconnects their connections) or greyed out in place
+   * (edgePolicy 'dim'). The layout is never recomputed: node positions are
+   * identical to the unfiltered graph.
+   *
+   * @param {object} criteria { nameQuery?, metricKey?, min?, max?, edgePolicy? }
+   * @returns {object} The filter status (see getGraphFilterStatus)
+   * @throws {TypeError} When the criteria is invalid (e.g. min > max, unknown
+   *                     edgePolicy, min/max without metricKey)
+   */
+  setGraphFilter (criteria) {
+    if (criteria === undefined || criteria === null) {
+      return this.clearGraphFilter();
+    }
+    const errors = validateCriteria(criteria);
+    if (errors.length > 0) {
+      throw new TypeError(`Invalid graph filter criteria: ${errors.join('; ')}`);
+    }
+    this._clearGraphFilterEffects();
+    this.graphFilter = clone(criteria);
+    this.updateView();
+    return this.getGraphFilterStatus();
+  }
+
+  /**
+   * Clear any active graph filter, restoring full visibility.
+   *
+   * @returns {object} The filter status (see getGraphFilterStatus)
+   */
+  clearGraphFilter () {
+    const hadFilter = !!this.graphFilter;
+    this._clearGraphFilterEffects();
+    this.graphFilter = null;
+    if (hadFilter) { this.updateView(); }
+    return this.getGraphFilterStatus();
+  }
+
+  /**
+   * Get the current graph filter status. When `empty` is true the filter is
+   * active but matched zero nodes; coordinating UI should show an explicit
+   * "no matches" state.
+   *
+   * @returns {object} { active, empty, edgePolicy, matched, total,
+   *                     visibleConnections, hiddenConnections, dimmedConnections }
+   */
+  getGraphFilterStatus () {
+    const result = this.graphFilterResult;
+    if (!result || !result.active) {
+      let visibleConnections = 0;
+      each(this.connections, (connection) => {
+        if (connection.isVisible()) { visibleConnections++; }
+      });
+      return {
+        active: false,
+        empty: false,
+        edgePolicy: (this.graphFilter && this.graphFilter.edgePolicy) || DEFAULT_EDGE_POLICY,
+        matched: 0,
+        total: this.nodeCounts.total,
+        visibleConnections,
+        hiddenConnections: 0,
+        dimmedConnections: 0
+      };
+    }
+    return {
+      active: true,
+      empty: result.empty,
+      edgePolicy: result.edgePolicy,
+      matched: result.counts.matchedNodes,
+      total: result.counts.totalNodes,
+      visibleConnections: result.counts.visibleConnections,
+      hiddenConnections: result.counts.hiddenConnections,
+      dimmedConnections: result.counts.dimmedConnections
+    };
+  }
+
+  _clearGraphFilterEffects () {
+    each(this.nodes, (node) => { node.filterHidden = false; });
+    each(this.connections, (connection) => { connection.filterHidden = false; });
+    if (this.graphFilterResult && this.graphFilterResult.active
+        && this.graphFilterResult.edgePolicy === EDGE_POLICIES.DIM) {
+      // Remove dimming applied by a previous 'dim' policy filter. Any active
+      // search highlighting is re-applied by the updateView() that follows.
+      const dimNodes = transform(this.nodes, (result, node) => {
+        if (node.isVisible()) { result[node.getName()] = false; }
+      });
+      const dimConnections = transform(this.connections, (result, connection) => {
+        if (connection.isVisible()) { result[connection.getName()] = false; }
+      });
+      this._applyDimming(dimNodes, dimConnections, false);
+    }
+    this.graphFilterResult = null;
+  }
+
+  _applyGraphFilterVisibility () {
+    const graphData = {
+      nodes: map(this.nodes, node => ({
+        name: node.getName(),
+        displayName: node.displayName,
+        metadata: node.metadata,
+        metrics: node.metrics,
+        nodes: node.nodes
+      })),
+      connections: map(this.connections, connection => ({
+        source: connection.source.getName(),
+        target: connection.target.getName()
+      }))
+    };
+    const result = applyGraphFilter(graphData, this.graphFilter);
+    this.graphFilterResult = result;
+    if (result.active && result.edgePolicy === EDGE_POLICIES.HIDE) {
+      each(result.nodes, (state, nodeName) => {
+        if (state.hidden && this.nodes[nodeName]) { this.nodes[nodeName].filterHidden = true; }
+      });
+      each(result.connections, (state, connectionName) => {
+        if (state.hidden && this.connections[connectionName]) { this.connections[connectionName].filterHidden = true; }
+      });
+    }
+    this.emit('graphFilterStatus', this.getGraphFilterStatus());
+  }
+
+  _applyGraphFilterDimming () {
+    const result = this.graphFilterResult;
+    if (!result || !result.active || result.edgePolicy !== EDGE_POLICIES.DIM) { return; }
+    const dimNodes = transform(this.nodes, (acc, node) => {
+      if (node.isVisible()) { acc[node.getName()] = true; }
+    });
+    const dimConnections = transform(this.connections, (acc, connection) => {
+      if (connection.isVisible()) { acc[connection.getName()] = true; }
+    });
+    each(result.nodes, (state, nodeName) => {
+      if (state.matched && hasOwnPropF.call(dimNodes, nodeName)) { dimNodes[nodeName] = false; }
+    });
+    each(result.connections, (state, connectionName) => {
+      if (!state.dimmed && hasOwnPropF.call(dimConnections, connectionName)) { dimConnections[connectionName] = false; }
+    });
+    this._applyDimming(dimNodes, dimConnections, true);
   }
 
   /**
@@ -651,7 +805,9 @@ class TrafficGraph extends EventEmitter {
     let changed = false;
     each(this.connections, (connection) => {
       connection.defaultFiltered = !every(filters.connection, f => f.passes(connection, f.defaultValue));
-      const filtered = (!connection.source.isVisible() && !connection.target.isVisible()) || !every(filters.connection, f => f.passes(connection, f.value));
+      // Use layout visibility here so that the graph filter (filterHidden)
+      // never leaks into the `filtered` flags that drive layout.
+      const filtered = (!connection.source.isLayoutVisible() && !connection.target.isLayoutVisible()) || !every(filters.connection, f => f.passes(connection, f.value));
       if (connection.filtered !== filtered) {
         connection.filtered = filtered;
         changed = true;
@@ -676,12 +832,12 @@ class TrafficGraph extends EventEmitter {
     let changed = false;
     each(this.nodes, (node) => {
       node.defaultFiltered = !node.hasDefaultVisibleConnections() || !every(filters.node, f => f.passes(node, f.defaultValue));
-      const filtered = !node.focused && (!node.hasVisibleConnections() || !every(filters.node, f => f.passes(node, f.value)));
+      const filtered = !node.focused && (!node.hasLayoutVisibleConnections() || !every(filters.node, f => f.passes(node, f.value)));
       if (node.filtered !== filtered) {
         node.filtered = filtered;
         changed = true;
       }
-      if (!node.isVisible()) {
+      if (!node.isLayoutVisible()) {
         each(node.incomingConnections, (c) => { c.filtered = true; });
         each(node.outgoingConnections, (c) => { c.filtered = true; });
       }
@@ -778,9 +934,11 @@ class TrafficGraph extends EventEmitter {
       this._updateNodeFilters(filters);
     }
 
-    const subsetOfDefaultVisibleNodes = every(this.nodes, n => !n.isVisible() || (n.isVisible() && !n.defaultFiltered));
-    const subsetOfDefaultVisibleConnections = every(this.connections, c => !c.isVisible() || (c.isVisible() && !c.defaultFiltered));
-    const useInLayout = o => ((subsetOfDefaultVisibleNodes && subsetOfDefaultVisibleConnections) ? !o.defaultFiltered : o.isVisible());
+    // Layout decisions use isLayoutVisible() (identical to the historical
+    // isVisible()) so that an active graph filter never changes the layout.
+    const subsetOfDefaultVisibleNodes = every(this.nodes, n => !n.isLayoutVisible() || (n.isLayoutVisible() && !n.defaultFiltered));
+    const subsetOfDefaultVisibleConnections = every(this.connections, c => !c.isLayoutVisible() || (c.isLayoutVisible() && !c.defaultFiltered));
+    const useInLayout = o => ((subsetOfDefaultVisibleNodes && subsetOfDefaultVisibleConnections) ? !o.defaultFiltered : o.isLayoutVisible());
 
     // build the layout graph
     each(this.connections, (connection) => {

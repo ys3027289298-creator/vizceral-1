@@ -11,6 +11,7 @@
     "dev": "npm run watch",
     "doc": "documentation build ./src/vizceral.js --shallow -f md > USAGE.md",
     "lint": "eslint src --fix",
+    "test": "node test/graphFilter.test.js && node test/failurePaths.test.js && node --expose-gc test/benchmark.js > artifacts/benchmark.json && node test/verifyLegacy.js && node test/comparison.js",
     "build": "npm run doc && npm run build:js",
     "build:js": "webpack --bail --mode=production && webpack --bail -p --mode=production",
     "build:dev": "webpack --bail --mode=development && webpack --bail -d --mode=development",

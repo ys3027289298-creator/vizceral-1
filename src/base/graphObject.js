@@ -25,6 +25,9 @@ class GraphObject extends EventEmitter {
     super();
     this.minimumNoticeLevel = 0;
     this.metadata = {};
+    // Set by TrafficGraph.setGraphFilter() with the 'hide' edge policy.
+    // Defaults to false so behavior is unchanged when no graph filter is active.
+    this.filterHidden = false;
   }
 
   getName () {
@@ -82,6 +85,15 @@ class GraphObject extends EventEmitter {
   }
 
   isVisible () {
+    return !this.filtered && !this.filterHidden;
+  }
+
+  /**
+   * Visibility as far as layout is concerned. Graph filtering must never
+   * change the layout, so this intentionally ignores the filterHidden flag
+   * and matches the historical isVisible() semantics exactly.
+   */
+  isLayoutVisible () {
     return !this.filtered;
   }
 
