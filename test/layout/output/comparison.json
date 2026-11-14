@@ -1,0 +1,17 @@
+{
+  "ring (before)": {
+    "overlapPairs": 452,
+    "minPairDistance": 18.851,
+    "boundingBox": "1600x1200"
+  },
+  "ringCenter (before)": {
+    "overlapPairs": 597,
+    "minPairDistance": 16.813,
+    "boundingBox": "1065x1065"
+  },
+  "forceDirected (after)": {
+    "overlapPairs": 2,
+    "minPairDistance": 54.083,
+    "boundingBox": "2916x2935"
+  }
+}

@@ -803,6 +803,12 @@ class TrafficGraph extends EventEmitter {
 
     this.layout.run(graph, this.layoutDimensions, (() => {
       Console.info(`Layout: Received updated layout for ${this.name} from the worker.`);
+      // Restore positions of nodes the user dragged so they survive layout switches.
+      each(this.nodes, (node) => {
+        if (node.userPositioned && node.userPosition) {
+          node.updatePosition({ x: node.userPosition.x, y: node.userPosition.y });
+        }
+      });
       this.hasPositionData = true;
       this.updateView();
     }));

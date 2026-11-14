@@ -26,6 +26,7 @@ import TWEEN from '@tweenjs/tween.js';
 import Hammer from 'hammerjs';
 
 import DNSLayout from './layouts/dnsLayout';
+import ForceDirectedLayout from './layouts/forceDirectedLayout';
 import DnsTrafficGraph from './dns/dnsTrafficGraph';
 import FocusedChildTrafficGraph from './focused/focusedChildTrafficGraph';
 import FocusedTrafficGraph from './focused/focusedTrafficGraph';
@@ -166,6 +167,7 @@ class Vizceral extends EventEmitter {
     this.layouts = {
       ltrTree: LTRTreeLayout,
       dns: DNSLayout,
+      forceDirected: ForceDirectedLayout,
       ringCenter: RingCenterLayout,
       ring: RingLayout
     };

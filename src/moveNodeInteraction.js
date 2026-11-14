@@ -140,6 +140,9 @@ class MoveNodeInteraction {
     const nodePos = node.position;
     nodePos.x = posX;
     nodePos.y = posY;
+    // Remember the user-dragged position so layout switches can restore it.
+    node.userPositioned = true;
+    node.userPosition = { x: posX, y: posY };
     node.updateBoundingBox();
     const nodeView = node.view;
     if (nodeView) {
