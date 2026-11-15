@@ -39,6 +39,7 @@ import RingLayout from './layouts/ringLayout';
 
 import RendererUtils from './rendererUtils';
 import MoveNodeInteraction from './moveNodeInteraction';
+import ZoomPanInteraction from './zoomPanInteraction';
 
 /**
 * The `objectHovered` event is fired whenever on mouseover on a 'node' or 'connection' .
@@ -151,7 +152,8 @@ class Vizceral extends EventEmitter {
     this.graphs = {};
     this.options = {
       showLabels: true,
-      allowDraggingOfNodes: false
+      allowDraggingOfNodes: false,
+      allowZoomPan: true
     };
     this.filters = {};
 
@@ -163,6 +165,7 @@ class Vizceral extends EventEmitter {
       dns: DnsTrafficGraph
     };
     this.moveNodeInteraction = new MoveNodeInteraction(this);
+    this.zoomPanInteraction = new ZoomPanInteraction(this);
     this.layouts = {
       ltrTree: LTRTreeLayout,
       dns: DNSLayout,
@@ -170,6 +173,7 @@ class Vizceral extends EventEmitter {
       ring: RingLayout
     };
     this.moveNodeInteraction.setEnabled(this.options.allowDraggingOfNodes);
+    this.zoomPanInteraction.setEnabled(this.options.allowZoomPan);
   }
 
 
@@ -327,6 +331,9 @@ class Vizceral extends EventEmitter {
   }
 
   onDocumentClick (event) {
+    if (this.zoomPanInteraction && this.zoomPanInteraction.consumeClickSuppression()) {
+      return;
+    }
     this.calculateIntersectedObject(event.center.x, event.center.y);
     if (this.currentGraph) {
       this.currentGraph.handleIntersectedObjectClick();
@@ -334,8 +341,13 @@ class Vizceral extends EventEmitter {
   }
 
   onDocumentDoubleClick (event) {
+    if (this.zoomPanInteraction && this.zoomPanInteraction.consumeClickSuppression()) {
+      return;
+    }
     this.calculateIntersectedObject(event.center.x, event.center.y);
-    this.currentGraph.handleIntersectedObjectDoubleClick();
+    if (this.currentGraph) {
+      this.currentGraph.handleIntersectedObjectDoubleClick();
+    }
   }
 
   getNearestValidGraph (viewArray) {
@@ -483,6 +495,17 @@ class Vizceral extends EventEmitter {
     }
   }
 
+  /**
+   * Update component options.
+   *
+   * @param {object} options
+   * @param {boolean} [options.showLabels] Show or hide node labels.
+   * @param {boolean} [options.allowDraggingOfNodes] Allow repositioning nodes by dragging them.
+   * @param {boolean} [options.allowZoomPan=true] Enable wheel zoom (cursor anchored,
+   * 0.5x-8x), left-drag panning and double-click-on-empty-space reset. Node
+   * double-clicks keep their drill-down behavior. Hit testing stays accurate at
+   * every zoom/pan state because the camera, rather than the graph, is transformed.
+   */
   setOptions (options) {
     // Show labels
     let { showLabels } = options;
@@ -504,6 +527,21 @@ class Vizceral extends EventEmitter {
     if (allowDraggingOfNodes !== this.options.allowDraggingOfNodes) {
       this.options.allowDraggingOfNodes = allowDraggingOfNodes;
       this.moveNodeInteraction.setEnabled(allowDraggingOfNodes);
+    }
+
+    // Allow wheel zoom, drag panning and double-click reset
+    let { allowZoomPan } = options;
+    if (typeof allowZoomPan !== 'boolean') {
+      if (allowZoomPan === undefined) {
+        ({ allowZoomPan } = this.options);
+      } else {
+        Console.warn('Vizceral.setOptions: allowZoomPan must be a boolean but was something else, coercing to boolean. Got the following value: ', allowZoomPan);
+        allowZoomPan = !!allowZoomPan;
+      }
+    }
+    if (allowZoomPan !== this.options.allowZoomPan) {
+      this.options.allowZoomPan = allowZoomPan;
+      this.zoomPanInteraction.setEnabled(allowZoomPan);
     }
   }
 
@@ -568,6 +606,11 @@ class Vizceral extends EventEmitter {
     this.currentGraph = graph;
     this.updateGraph(this.currentGraph);
     this.currentGraph.setCurrent(true);
+
+    // Every graph starts from the default framing; zoom/pan is view-local.
+    if (this.zoomPanInteraction) {
+      this.zoomPanInteraction.resetView();
+    }
 
     this.emit('viewChanged', { view: this.currentGraph.graphIndex, graph: this.currentGraph, redirectedFrom: redirectedFrom });
   }
@@ -683,7 +726,10 @@ class Vizceral extends EventEmitter {
 
   validateRaycaster (mouseLocVPSpaceX, mouseLocVPSpaceY) {
     if (this.raycaster_mouseLocation_viewportSpace.x === mouseLocVPSpaceX
-      && this.raycaster_mouseLocation_viewportSpace.y === mouseLocVPSpaceY) {
+      && this.raycaster_mouseLocation_viewportSpace.y === mouseLocVPSpaceY
+      && this.raycaster_cameraZoom === this.camera.zoom
+      && this.raycaster_cameraPositionX === this.camera.position.x
+      && this.raycaster_cameraPositionY === this.camera.position.y) {
       return;
     }
     const canvasDomElem = this.renderer.domElement;
@@ -696,6 +742,9 @@ class Vizceral extends EventEmitter {
     this.raycaster.setFromCamera(mouseLocNormScreenSpace, this.camera);
     this.raycaster_mouseLocation_viewportSpace.x = mouseLocVPSpaceX;
     this.raycaster_mouseLocation_viewportSpace.y = mouseLocVPSpaceY;
+    this.raycaster_cameraZoom = this.camera.zoom;
+    this.raycaster_cameraPositionX = this.camera.position.x;
+    this.raycaster_cameraPositionY = this.camera.position.y;
   }
 
   calculateMouseOver (immediate) {
