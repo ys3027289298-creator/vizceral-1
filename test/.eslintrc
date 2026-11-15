@@ -1,0 +1,23 @@
+{
+  "extends": ["airbnb-base"],
+  "parser": "babel-eslint",
+  "env": {
+    "browser": true,
+    "node": true
+  },
+  "rules": {
+    "indent": [2, 2],
+    "comma-dangle": 0,
+    "func-names": 0,
+    "no-bitwise": 0,
+    "no-var": 1,
+    "object-shorthand": 0,
+    "max-len": 0,
+    "import/no-extraneous-dependencies": 0,
+    "import/no-webpack-loader-syntax": 0,
+    "no-underscore-dangle": 0,
+    "no-console": 0,
+    "no-await-in-loop": 0,
+    "no-restricted-globals": 0
+  }
+}

@@ -38,6 +38,9 @@
     -   [Parameters][34]
 -   [setFilters][35]
     -   [Parameters][36]
+-   [exportVideo][37]
+    -   [Parameters][38]
+-   [dispose][39]
 
 ## Copyright_Notice
 
@@ -63,7 +66,7 @@ The `objectHovered` event is fired whenever on mouseover on a 'node' or 'connect
 
 ### Properties
 
--   `object` **[object][37]** The object that has been hovered,
+-   `object` **[object][40]** The object that has been hovered,
 
 ## objectHighlighted
 
@@ -72,7 +75,7 @@ The `objectHighlighted` event is fired whenever an object is highlighted.
 
 ### Properties
 
--   `object` **[object][37]** The object that has been highlighted, or the highlighted object that has been updated.
+-   `object` **[object][40]** The object that has been highlighted, or the highlighted object that has been updated.
 
 ## viewChanged
 
@@ -80,7 +83,7 @@ The `viewChanged` event is fired whenever the view changes
 
 ### Properties
 
--   `view` **[array][38]** The currently selected view (e.g. \[] for global, ['us-east-1'] for one node deep, ['us-east-1', 'api'] for two nodes deep)
+-   `view` **[array][41]** The currently selected view (e.g. \[] for global, ['us-east-1'] for one node deep, ['us-east-1', 'api'] for two nodes deep)
 
 ## nodeContextSizeChanged
 
@@ -88,7 +91,7 @@ The `nodeContextSizeChanged` event is fired whenever the context panel size for 
 
 ### Properties
 
--   `dimensions` **[object][37]** The dimensions of the node context panels
+-   `dimensions` **[object][40]** The dimensions of the node context panels
 
 ## matchesFound
 
@@ -96,7 +99,7 @@ The `matchesFound` event is fired whenever nodes are found via findNodes().
 
 ### Properties
 
--   `matches` **[object][37]** The matches object { total, visible }
+-   `matches` **[object][40]** The matches object { total, visible }
 
 ## viewUpdated
 
@@ -108,14 +111,14 @@ Represents a Vizceral component.
 
 ### Parameters
 
--   `canvas` **[object][37]?** The canvas to render the graph onto; if not provided, will create a canvas accessible by this.renderer.domElement
--   `targetFramerate` **[Number][39]?** Target frame rate to render at. Will not limit FPS if not provided or set to 0.
+-   `canvas` **[object][40]?** The canvas to render the graph onto; if not provided, will create a canvas accessible by this.renderer.domElement
+-   `targetFramerate` **[Number][42]?** Target frame rate to render at. Will not limit FPS if not provided or set to 0.
 
 ## getStyles
 
 Get an array of all possible defined styles
 
-Returns **[array][38]** Array of all possible styles
+Returns **[array][41]** Array of all possible styles
 
 ## updateStyles
 
@@ -124,7 +127,7 @@ Update the global styles
 ### Parameters
 
 -   `styles`  
--   `An` **[Object][37]** object map of style names to values
+-   `An` **[Object][40]** object map of style names to values
 
 ## updateDefinitions
 
@@ -133,7 +136,7 @@ Update the global definitions
 ### Parameters
 
 -   `definitions`  
--   `An` **[Object][37]** object map of definitions. See the format and defaults in ([https://github.com/Netflix/Vizceral/wiki/Configuration#definitions-for-data-to-display][40])
+-   `An` **[Object][40]** object map of definitions. See the format and defaults in ([https://github.com/Netflix/Vizceral/wiki/Configuration#definitions-for-data-to-display][43])
 
 ## updateData
 
@@ -143,7 +146,7 @@ with the complete set of traffic data anytime there is an update.
 ### Parameters
 
 -   `trafficData`  
--   `data` **[object][37]** The traffic data that matches the format in ([https://github.com/Netflix/Vizceral/wiki/How-to-Use#graph-data-format][41])
+-   `data` **[object][40]** The traffic data that matches the format in ([https://github.com/Netflix/Vizceral/wiki/How-to-Use#graph-data-format][44])
 
 ## setHighlightedNode
 
@@ -151,7 +154,7 @@ Sets the highlighted node.  If the node is undefined, clears any highlighting.
 
 ### Parameters
 
--   `node` **[object][37]** The node to highlight
+-   `node` **[object][40]** The node to highlight
 
 ## setHighlightedConnection
 
@@ -159,7 +162,7 @@ Sets the highlighted connection.  If the connection is undefined, clears any hig
 
 ### Parameters
 
--   `connection` **[object][37]** The connection to highlight
+-   `connection` **[object][40]** The connection to highlight
 
 ## findNodes
 
@@ -168,9 +171,9 @@ of sub nodes, if nodes have one.
 
 ### Parameters
 
--   `searchString` **[string][42]** The string to match against the nodes.
+-   `searchString` **[string][45]** The string to match against the nodes.
 
-Returns **[object][37]** { total, totalMatches, visible, visibleMatches }
+Returns **[object][40]** { total, totalMatches, visible, visibleMatches }
 
 ## setView
 
@@ -186,8 +189,8 @@ Ex:
 
 ### Parameters
 
--   `viewArray` **[array][38]** the array containing the view to set. (optional, default `[]`)
--   `objectNameToHighlight` **[string][42]** a node or connection to set as highlighted in the current viewArray
+-   `viewArray` **[array][41]** the array containing the view to set. (optional, default `[]`)
+-   `objectNameToHighlight` **[string][45]** a node or connection to set as highlighted in the current viewArray
 
 ## setModes
 
@@ -208,7 +211,7 @@ Get a specific node object
 
 ### Parameters
 
--   `viewArray` **[array][38]** e.g. [ node1, node2 ]
+-   `viewArray` **[array][41]** e.g. [ node1, node2 ]
 
 ## setFilters
 
@@ -216,7 +219,37 @@ Set the set of filters to apply along with their current values.
 
 ### Parameters
 
--   `filters` **[object][37]** The filters that match the format in ([https://github.com/Netflix/Vizceral/wiki/Configuration#filters][43])
+-   `filters` **[object][40]** The filters that match the format in ([https://github.com/Netflix/Vizceral/wiki/Configuration#filters][46])
+
+## exportVideo
+
+Export a video of the current traffic graph over a time axis.
+
+Frames are rendered one at a time on a detached, offscreen canvas backed
+by a separate WebGL context, then encoded with the MediaRecorder API.
+The live component keeps rendering normally: its canvas, camera, scene,
+current graph and traffic data are never mutated by an export.
+
+### Parameters
+
+-   `options` **[object][40]?** Export options.
+    -   `options.fps` **[number][42]** Frame rate, an integer from 1 to 60. (optional, default `30`)
+    -   `options.duration` **[number][42]** Clip length in seconds, greater than 0 and at most 600.
+    -   `options.width` **[number][42]** Output width in CSS pixels (2..7680). (optional, default `1280`)
+    -   `options.height` **[number][42]** Output height in CSS pixels (2..7680). (optional, default `720`)
+    -   `options.mimeType` **[string][45]?** Explicit recorder MIME type; auto-detected if omitted.
+    -   `options.videoBitsPerSecond` **[number][42]?** Optional recorder bitrate.
+-   `adapters` **[object][40]?** Injectable browser primitives (testing only).
+
+Returns **{promise: [Promise][47]&lt;{blob: [Blob][48], mimeType: [string][45], width: [number][42], height: [number][42], fps: [number][42], duration: [number][42], frames: [number][42], framesRendered: [number][42]}>, cancel: [Function][49]}** The export handle. `promise` rejects with a
+  `VideoExportError` (with a stable `code`) on any failure, including
+  cancellation; `cancel()` aborts an in-progress export.
+
+## dispose
+
+Release the resources owned by this Vizceral instance (WebGL context,
+geometries, event listeners and interaction managers). Safe to call more
+than once.
 
 [1]: #copyright_notice
 
@@ -290,16 +323,28 @@ Set the set of filters to apply along with their current values.
 
 [36]: #parameters-10
 
-[37]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
+[37]: #exportvideo
 
-[38]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array
+[38]: #parameters-11
 
-[39]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number
+[39]: #dispose
 
-[40]: https://github.com/Netflix/Vizceral/wiki/Configuration#definitions-for-data-to-display
+[40]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
 
-[41]: https://github.com/Netflix/Vizceral/wiki/How-to-Use#graph-data-format
+[41]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array
 
-[42]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String
+[42]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number
 
-[43]: https://github.com/Netflix/Vizceral/wiki/Configuration#filters
+[43]: https://github.com/Netflix/Vizceral/wiki/Configuration#definitions-for-data-to-display
+
+[44]: https://github.com/Netflix/Vizceral/wiki/How-to-Use#graph-data-format
+
+[45]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String
+
+[46]: https://github.com/Netflix/Vizceral/wiki/Configuration#filters
+
+[47]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise
+
+[48]: https://developer.mozilla.org/docs/Web/API/Blob
+
+[49]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function

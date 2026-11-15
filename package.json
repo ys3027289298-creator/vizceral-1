@@ -16,7 +16,10 @@
     "build:dev": "webpack --bail --mode=development && webpack --bail -d --mode=development",
     "watch": "webpack --watch -d",
     "release": "release",
-    "validate": "npm ls"
+    "validate": "npm ls",
+    "test:baseline": "node test/snapshot-baseline.js",
+    "test:build": "node test/build-bundles.js",
+    "test:verify": "node test/run.js"
   },
   "devDependencies": {
     "babel-core": "^6.18.0",

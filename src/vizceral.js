@@ -39,6 +39,7 @@ import RingLayout from './layouts/ringLayout';
 
 import RendererUtils from './rendererUtils';
 import MoveNodeInteraction from './moveNodeInteraction';
+import createVideoExport from './videoExport/videoExporter';
 
 /**
 * The `objectHovered` event is fired whenever on mouseover on a 'node' or 'connection' .
@@ -133,13 +134,15 @@ class Vizceral extends EventEmitter {
     // Mouse/Touch interactivity
     this.raycaster_mouseLocation_viewportSpace = new THREE.Vector2(-1, -1);
     this.raycaster = new THREE.Raycaster();
+    this._boundMouseMove = event => this.onDocumentMouseMove(event);
     if (window) {
-      window.addEventListener('scroll', () => this.updateBoundingRectCache());
+      this._scrollListener = () => this.updateBoundingRectCache();
+      window.addEventListener('scroll', this._scrollListener);
     }
 
     this.hammertime = new Hammer.Manager(this.renderer.domElement);
     this.hammertime.on('press', event => this.onDocumentMouseMove(event), false);
-    this.renderer.domElement.addEventListener('mousemove', event => this.onDocumentMouseMove(event), false);
+    this.renderer.domElement.addEventListener('mousemove', this._boundMouseMove, false);
     const singleTap = new Hammer.Tap({ event: 'singletap' });
     const doubleTap = new Hammer.Tap({ event: 'doubletap', taps: 2 });
     this.hammertime.add([doubleTap, singleTap]);
@@ -563,6 +566,73 @@ class Vizceral extends EventEmitter {
     Object.assign(this.renderers, renderers);
   }
 
+  /**
+   * Export a video of the current traffic graph over a time axis.
+   *
+   * Frames are rendered one at a time on a detached, offscreen canvas backed
+   * by a separate WebGL context, then encoded with the MediaRecorder API.
+   * The live component keeps rendering normally: its canvas, camera, scene,
+   * current graph and traffic data are never mutated by an export.
+   *
+   * @param {object} [options] Export options.
+   * @param {number} [options.fps=30] Frame rate, an integer from 1 to 60.
+   * @param {number} options.duration Clip length in seconds, greater than 0 and at most 600.
+   * @param {number} [options.width=1280] Output width in CSS pixels (2..7680).
+   * @param {number} [options.height=720] Output height in CSS pixels (2..7680).
+   * @param {string} [options.mimeType] Explicit recorder MIME type; auto-detected if omitted.
+   * @param {number} [options.videoBitsPerSecond] Optional recorder bitrate.
+   * @param {object} [adapters] Injectable browser primitives (testing only).
+   * @returns {{ promise: Promise<{blob: Blob, mimeType: string, width: number, height: number,
+   *   fps: number, duration: number, frames: number, framesRendered: number}>,
+   *   cancel: Function }} The export handle. `promise` rejects with a
+   *   `VideoExportError` (with a stable `code`) on any failure, including
+   *   cancellation; `cancel()` aborts an in-progress export.
+   */
+  exportVideo (options, adapters) {
+    return createVideoExport(this, options, adapters);
+  }
+
+  /**
+   * Release the resources owned by this Vizceral instance (WebGL context,
+   * geometries, event listeners and interaction managers). Safe to call more
+   * than once.
+   */
+  dispose () {
+    if (this._disposed) { return; }
+    this._disposed = true;
+
+    if (this.hammertime) {
+      try { this.hammertime.destroy(); } catch (e) { /* noop */ }
+      this.hammertime = null;
+    }
+    if (this.renderer && this.renderer.domElement) {
+      this.renderer.domElement.removeEventListener('mousemove', this._boundMouseMove);
+    }
+    if (this._scrollListener && typeof window !== 'undefined' && window.removeEventListener) {
+      window.removeEventListener('scroll', this._scrollListener);
+      this._scrollListener = null;
+    }
+
+    each(this.graphs, (graph) => {
+      if (typeof graph.dispose === 'function') { graph.dispose(); }
+    });
+    this.graphs = {};
+
+    if (this.geometry) {
+      this.geometry.dispose();
+      this.geometry = null;
+    }
+    if (this.renderer) {
+      this.renderer.dispose();
+      const context = this.renderer.getContext && this.renderer.getContext();
+      if (context && typeof context.getExtension === 'function') {
+        const loseExt = context.getExtension('WEBGL_lose_context');
+        if (loseExt) { loseExt.loseContext(); }
+      }
+      this.renderer = null;
+    }
+  }
+
   setCurrentGraph (graph, redirectedFrom) {
     graph.setFilters(this.filters);
     this.currentGraph = graph;
@@ -774,8 +844,12 @@ class Vizceral extends EventEmitter {
     this.render(time);
   }
 
-  render (time) {
-    TWEEN.update();
+  render (time, renderOptions) {
+    // Offscreen export renders call with suppressTweenUpdate so a detached
+    // renderer can never drive the shared tween manager used by the live view.
+    if (!renderOptions || !renderOptions.suppressTweenUpdate) {
+      TWEEN.update();
+    }
 
     // Check size
     if ((this.renderer.domElement.offsetWidth !== 0 && this.width !== this.renderer.domElement.offsetWidth)
