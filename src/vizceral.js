@@ -39,6 +39,7 @@ import RingLayout from './layouts/ringLayout';
 
 import RendererUtils from './rendererUtils';
 import MoveNodeInteraction from './moveNodeInteraction';
+import { exportSceneToSVG } from './exporters/svgExporter';
 
 /**
 * The `objectHovered` event is fired whenever on mouseover on a 'node' or 'connection' .
@@ -792,6 +793,20 @@ class Vizceral extends EventEmitter {
     this.boundingRect = this.renderer.domElement.getBoundingClientRect();
   }
 
+  /**
+   * Export the current scene as a standalone, fully vector SVG document.
+   * The export reads world-space geometry, so it is never clipped by the
+   * camera viewport and includes the complete graph. Unsupported effects
+   * (particle animation, additive blending, raster-only textures) are recorded
+   * in the returned degradations map and annotated inside the SVG metadata.
+   *
+   * @param {object} [options] Passed through to exportSceneToSVG
+   * @returns {{svg: string, stats: object, degradations: object, viewBox: object}}
+   */
+  exportSVG (options) {
+    return exportSceneToSVG(this.scene, options);
+  }
+
   setSize (w, h) {
     this.width = w;
     this.height = h;
@@ -828,3 +843,10 @@ class Vizceral extends EventEmitter {
 
 export default Vizceral;
 export * from './base';
+export {
+  exportSceneToSVG,
+  validateSVGStructure,
+  SVGExportError,
+  SVG_EXPORT_ERRORS,
+  DEGRADATION_CODES
+} from './exporters/svgExporter';

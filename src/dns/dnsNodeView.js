@@ -59,6 +59,18 @@ class DnsNodeView extends NodeView {
     textContext.fillText(this.object.getDisplayName(), this.textCanvas.width / 2, top);
 
     this.textTexture.needsUpdate = true;
+
+    // Vector-export metadata only; the WebGL render path continues to use the canvas texture.
+    text.userData.svgLabel = {
+      kind: 'dns-node-text',
+      text: this.object.getDisplayName(),
+      fontSize: this.headerFontSize,
+      fontWeight: 700,
+      fontFamily: "'Source Sans Pro', sans-serif",
+      background: null,
+      textColor: GlobalStyles.getColorTraffic(this.object.getClass()),
+      rectRadius: 0
+    };
   }
 }
 

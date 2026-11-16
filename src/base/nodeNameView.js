@@ -69,6 +69,18 @@ class NodeNameView extends BaseView {
 
     this.material = new THREE.MeshBasicMaterial({ map: this.nameTexture, side: THREE.DoubleSide, transparent: true });
     this.view = this.addChildElement(new THREE.PlaneBufferGeometry(this.nameCanvas.width, this.nameCanvas.height), this.material);
+    // Vector-export metadata only; the WebGL render path continues to use the canvas texture.
+    this.view.userData.svgLabel = {
+      kind: 'node-name',
+      text: this.getDisplayName(),
+      fontSize: 18,
+      fontWeight: 400,
+      fontFamily: "'Source Sans Pro', sans-serif",
+      background: GlobalStyles.getColorTraffic(this.object.getClass(), this.highlight),
+      borderColor: GlobalStyles.styles.colorLabelBorder,
+      textColor: GlobalStyles.styles.colorLabelText,
+      rectRadius: 3
+    };
   }
 
   getDisplayName (getDefault) {
@@ -100,6 +112,15 @@ class NodeNameView extends BaseView {
     context.fillText(this.getDisplayName(), this.nameCanvas.width / 2, this.nameCanvas.height / 2);
 
     this.nameTexture.needsUpdate = true;
+
+    // Keep the vector label metadata in sync with the canvas texture's current contents.
+    if (this.view && this.view.userData.svgLabel) {
+      this.view.userData.svgLabel.text = this.getDisplayName();
+      this.view.userData.svgLabel.fontSize = fontSize;
+      this.view.userData.svgLabel.background = labelColor;
+      this.view.userData.svgLabel.borderColor = GlobalStyles.styles.colorLabelBorder;
+      this.view.userData.svgLabel.textColor = GlobalStyles.styles.colorLabelText;
+    }
 
     if (this.view) {
       this.applyPosition();
